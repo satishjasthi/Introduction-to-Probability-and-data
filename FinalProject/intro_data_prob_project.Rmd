@@ -1,0 +1,310 @@
+---
+title: "Exploring the BRFSS data"
+output: 
+  html_document: 
+    fig_height: 4
+    highlight: pygments
+    theme: spacelab
+---
+
+## Setup
+
+### Load packages
+
+```{r load-packages, message = FALSE}
+library(ggplot2)
+library(dplyr)
+```
+
+### Load data
+
+Make sure your data and R Markdown files are in the same directory. When loaded
+your data file will be called `brfss2013`. Delete this note when before you submit 
+your work. 
+
+```{r load-data}
+load("brfss2013.RData")
+```
+
+
+
+* * *
+
+## Part 1: Data
+*.The Behavioral Risk Factor Surveillance System (BRFSS) is the nation's premier system of health-related telephone surveys that collect state data about U.S. residents regarding their health-related risk behaviors, chronic health conditions, and use of preventive services. Established in 1984 with 15 states, BRFSS now collects data in all 50 states as well as the District of Columbia and three U.S. territories. BRFSS completes more than 400,000 adult interviews each year, making it the largest continuously conducted health survey system in the world.
+
+By collecting behavioral health risk data at the state and local level, BRFSS has become a powerful tool for targeting and building health promotion activities. As a result, BRFSS users have increasingly demanded more data and asked for more questions on the survey. Currently, there is a wide sponsorship of the BRFSS survey, including most divisions in the CDC National Center for Chronic Disease Prevention and Health Promotion; other CDC centers; and federal agencies, such as the Health Resources and Services Administration, Administration on Aging, Department of Veterans Affairs, and Substance Abuse and Mental Health Services Administration.
+
+*.It is clearly mentioned in the BRFSS documentation[1] that it is an ongoing surveillance system which means it a prospective study which comes under observation study.
+
+
+*. All the results of BRFSS study can be generalized to US population ,since the BRFSS observational study was carried out using Americans as samples.
+
+*. As mentioned in sampling design of The BRFSS Data User Guide [2] BRFSS uses stratified sampling methhod(random sampling method) to create a sample of telephone numbers.
+
+*.Eventhough random sampling method was used ,drawing causal relation between variables may not be possible because the random assignment of populace was not used and hence effect of confounding variables will not be nullified or taken into consideration in this case of observational study.
+
+*.However the data can be used to find the association between variables.
+
+
+* * *
+
+## Part 2: Research questions 
+
+**Research quesion 1:**
+Research question: Is there an association between fruit juice consumption and an increased blood sugar level in female diabetics patients?
+
+Importance of research question : American Diabetes Association [3] has found an association between consumption of fruit juice and a substantial increase in blood sugar level of female type2 Diabetic patients which is a major risk factor that a diabete must be aware to keep her safe.
+So I would like to know whether BRFSS dataset will be able show the same association between fruit juice consumption and female diabetes.
+
+variables involved: 
+1. cadult = 2 (ladult:Are You 18 Years Of Age Or Older?,2 = female,phonecall type = cellular)
+
+2.fruitju1 = How Many Times Did You Drink 100 Percent Pure Fruit Juices?
+
+3.diabete3 = Do you have Diabetes?
+
+
+**Research quesion 2:**
+
+Research question: Can short sleep duration be one of the risk factors for hypertension & pre-hypertension?
+
+Importance of research question: As per the article published by James E. Gangwisch et al [4],Depriving healthy subjects of sleep has been shown to acutely increase blood pressure and sympathetic nervous system activity. Prolonged short sleep durations could lead to hypertension through extended exposure to raised 24-hour blood pressure and heart rate, elevated sympathetic nervous system activity, and increased salt retention. Such forces could lead to structural adaptations and the entrainment of the cardiovascular system to operate at an elevated pressure equilibrium.
+
+vaiables involved:
+1. sleptim1 : On average, how many hours of sleep a person gets in a 24-hour period?
+
+2.bphigh4 : Ever told high pressure?
+
+3.bpmeds : Currently taking blood pressure medication.
+
+4.extract11 : What type of physical activity or exercise did you spend the most time doing during the past month?
+    extract11 = Yoga, for Yoga as a physical activity
+
+5.exract21 : What other type of physical activity gave you the next most exercise during the past month?
+    exract21 = Yoga for Yoga as a physical activity
+    
+
+**Research quesion 3:**
+Research question: Is there any association between performing Yoga & decrease in blood pressure levels in hypertension patients?
+
+Importance of research question: As per the article published by Sundar S  et al [5], Thus, with use of yoga in therapy of hypertension, requirement of antihypertensive drugs may be significantly decreased and in some cases may be totally dispensed with and it may be an useful adjunct in treatment of hypertension.
+
+vaiables Involved:
+
+1.bphigh4 : Ever told high pressure?
+
+2.bpmeds : Currently taking blood pressure medication.
+
+3.extract11 : What type of physical activity or exercise did you spend the most time doing during the past month?
+    extract11 = Yoga, for Yoga as a physical activity
+
+4.exract21 : What other type of physical activity gave you the next most exercise during the past month?
+    exract21 = Yoga for Yoga as a physical activity
+    
+    
+## Part 3: Exploratory data analysis
+
+**Research quesion 1:**
+```{r}
+
+library(devtools)
+library(dplyr)
+library(statsr)
+library(ggplot2)
+# Analysis of female diabetes:
+
+brfss2013 <- brfss2013 %>%
+ filter(!is.na(cadult)) %>%
+ mutate(femaleRespondents = ifelse(cadult == "Yes, female respondent","female","other"))
+
+brfss2013 <- brfss2013 %>%
+ mutate(female_fruitjuice_consumers = ifelse(femaleRespondents == "female" & brfss2013$fruitju1 <= 110,"low",ifelse(femaleRespondents == "female" & brfss2013$fruitju1 < 200,"medium",ifelse(femaleRespondents == "female" & brfss2013$fruitju1 <400,"high",NA))))
+
+brfss2013 <- brfss2013 %>%
+  mutate(Diabetepatient = ifelse(diabete3 == "Yes" | diabete3 == "Yes, but female told only during pregnancy","Yes","No"))
+
+brfss2013 <- brfss2013 %>%
+ mutate(femaleDiabete = ifelse(((brfss2013$femaleRespondents == "female") & (brfss2013$Diabetepatient =="Yes")),"yes","no"))
+
+#creating variables to make table readable
+femaleDiabetepatients <- brfss2013$Diabete
+femalefruitjuiceConsumers <- brfss2013$female_fruitjuice_consumers
+
+Table1 <- table(femalefruitjuiceConsumers,femaleDiabetepatients)
+Table1
+#Table1 can be considered as a summary stat for research question1(R1),because it gives the numerical description about the two main variables of R1 ie femalefruitjuiceConsumers & femaleDiabetepatients.
+
+
+#barplot(Table1,legend.text = T,main = "femalefruitjuiceConsumers and femaleDiabetepatients",xlab = "Diabetes",ylab = "fruitjuice consumption",las = 1)
+
+mosaicplot(Table1,col = c(5,9))
+
+
+
+
+```
+
+As we can see from the mosaic plots that there is a poor association between femalefruitjuiceConsumers(FJC) & 
+femaleDiabetepatients.(FD)
+
+The femalefruitjuiceConsumers are divided into three categories based on their frequency of fruit juice consumption they are high(H),medium(M) & low(L).
+
+From Tabel1 it can seen that H = Yes & FD = yes is only 9.4% of FJC = H (ie only 9.4% of High femalefruitjuiceConsumers are Diabetes)
+
+when L = Yes & FD = Yes is only 12.18% of FJC = L (ie only 12.18% of Low femalefruitjuiceConsumers are Diabetes)
+
+The poor association can be a result of effects of confounding variable which cannot be controlled in obseravtional studies.
+
+```{r, eval=FALSE, include=FALSE}
+
+'#Analysis of male diabetes:(Even though the research question was only related to female data,I had analysed male diabete data just to see the association between variables under interest wrt male data)
+brfss2013 <- brfss2013 %>%
+ filter(!is.na(cadult)) %>%
+ mutate(MaleRespondents = ifelse(cadult == "Yes, male respondent","Male","others"))
+
+brfss2013 <- brfss2013 %>%
+ mutate(Male_fruitjuice_consumers = ifelse(MaleRespondents == "Male" & brfss2013$fruitju1 <= 110,"low",ifelse(MaleRespondents == "Male" & brfss2013$fruitju1 < 200,"medium",ifelse(MaleRespondents == "Male" & brfss2013$fruitju1 <400,"high",NA))))
+
+brfss2013 <- brfss2013 %>%
+ mutate(MaleDiabete = ifelse(((brfss2013$MaleRespondents == "Male") & (brfss2013$Diabetepatient =="Yes")),"yes","no"))
+
+MaleDiabetepatients <- brfss2013$Diabete
+MalefruitjuiceConsumers <- brfss2013$Male_fruitjuice_consumers
+
+Table2 <- table(MalefruitjuiceConsumers,MaleDiabetepatients)
+
+mosaicplot(Table2,col = c(5,9))'
+
+```
+
+
+
+
+
+
+    
+**Research quesion 2:**
+```{r}
+brfss2013 <- brfss2013 %>%
+  filter(!is.na(sleptim1)) %>%
+  mutate(sleepdeprived = ifelse(sleptim1 <= 5,"yes","no"))
+
+brfss2013 %>%
+  group_by(sleepdeprived) %>%
+  summarise(count = n())
+
+brfss2013 <- brfss2013 %>%
+  filter(!is.na(sleptim1)) %>%
+  mutate(sleepdeprivedLevels = ifelse(brfss2013$sleptim1 == 1 , "1",ifelse(brfss2013$sleptim1 == 2,"2",ifelse(brfss2013$sleptim1 == 3,"3",ifelse(brfss2013$sleptim1 == 4,"4",ifelse(brfss2013$sleptim1 == 5,"5","More than five hours"))))))
+
+
+brfss2013 %>%
+  group_by(sleepdeprivedLevels) %>%
+  summarise(count = n())
+
+brfss2013 <- brfss2013 %>%
+  filter(!is.na(bphigh4)) %>%
+  mutate(hypertensionpatients = ifelse(bphigh4 == "Yes" | bphigh4 == "Told borderline or pre-hypertensive" | bphigh4 == "Yes, but female told only during pregnancy","yes","no"))
+
+brfss2013 %>%
+  group_by(hypertensionpatients) %>%
+  summarise(count = n()) 
+
+brfss2013 <- brfss2013 %>%
+  mutate(sleepdeprivedHypertensionpatients = ifelse(sleepdeprived == "yes" & hypertensionpatients == "yes","yes","no"))
+  
+brfss2013 %>%
+  group_by(sleepdeprivedHypertensionpatients) %>%
+  summarise(count = n())
+
+NumberOfHoursOfSleeping <- brfss2013$sleepdeprivedLevels
+Hypertension <- brfss2013$sleepdeprivedHypertensionpatients
+
+Table4 <- table(NumberOfHoursOfSleeping,Hypertension)
+
+mosaicplot(Table4,col = c(5,9),las = 1)
+```
+
+It can be clearly seen from the mosaic plots that there exists a strong association between number of hours of sleep(NS) and chances of being hypertensive(BPP).
+
+As we NS decreases number BPP increases, except for NS = 1,which may be due to outliers or confounding variables.
+
+However we cannot draw causal relationship between NS & BP.But if we sleep more than 5 hours then the chances of being pron High BP may reduce.
+
+
+**Research quesion 3:**
+```{r}
+brfss2013 <- brfss2013 %>%
+  filter(!is.na(exract11)) %>%
+  filter(!is.na(exract21)) %>%
+  mutate(DoYoga = ifelse(exract11 == "Yoga" | exract21 == "Yoga","yes","no"))
+
+brfss2013 %>%
+  group_by(DoYoga) %>%
+  summarise(count = n())
+
+'brfss2013 <- brfss2013 %>%
+  mutate(YogaHypertensionNo = ifelse(DoYoga == "yes" & hypertensionpatients == "no","yes","no"))'
+
+brfss2013 <- brfss2013 %>%
+  mutate(YogaNoHypertension = ifelse(DoYoga == "no" & hypertensionpatients == "yes","yes","no"))
+
+'brfss2013 <- brfss2013 %>%
+  mutate(YogaNoHypertensionNo = ifelse(DoYoga == "no" & hypertensionpatients == "no","yes","no"))'
+
+brfss2013 <- brfss2013 %>%
+  mutate(YogaHypertension = ifelse(DoYoga == "yes" & hypertensionpatients == "yes","yes","no"))
+
+'brfss2013 %>%
+  group_by(YogaHypertensionNo) %>%
+  summarise(count = n())'
+
+brfss2013 %>%
+  group_by(YogaNoHypertension) %>%
+  summarise(count = n())
+
+'brfss2013 %>%
+  group_by(YogaNoHypertensionNo) %>%
+  summarise(count = n())'
+
+brfss2013 %>%
+  group_by(YogaHypertension) %>%
+  summarise(count = n())
+
+#YogaWithNoHypertension <- brfss2013$YogaHypertensionNo
+NoYogaWithHypertension <- brfss2013$YogaNoHypertension #people who don't do yoga and has hypertension
+#NoYogaNoHypertension <- brfss2013$YogaNoHypertensionNo
+YogaWithHypertension <- brfss2013$YogaHypertension #people who do yoga and has hypertension
+Yoga <- brfss2013$DoYoga
+
+Table5 = table(NoYogaWithHypertension,Yoga)
+Table5
+mosaicplot(Table5,col = c(5,9),las = 1)
+
+
+```
+
+As it can be clearly seen from the mosaic plot, very few patients suffer from hypertension when they perform yoga.This plot is soley drawn in order to compare how performing yoga affects number of hypertension patients.
+
+
+```{r}
+Table6 = table(YogaWithHypertension,Yoga)
+Table6
+mosaicplot(Table6,col = c(5,9),las = 1)
+```
+
+It can be clearly seen from the mosiac plot that very few people who do yoga will suffer from Hypertension ,whereas large portion of populace under consideration who perform yoga doesn't suffer form Hypertension.
+
+
+**References :**
+
+1. BRFSS documentation (http://guides.library.duke.edu/c.php?g=289704&p=1930838)
+
+2. The BRFSS Data User guide (https://www.cdc.gov/brfss/data_documentation/pdf/userguidejune2013.pdf)
+
+3. American Diabetes Association (http://care.diabetesjournals.org/content/31/7/1311)
+
+4. Short Sleep Duration as a Risk Factor for Hypertension Analyses of the First National Health and Nutrition Examination Survey (http://hyper.ahajournals.org/content/47/5/833.full)
+
+5. Role of yoga in management of essential hypertension.(http://europepmc.org/abstract/med/6331698)
